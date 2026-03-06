@@ -1,0 +1,37 @@
+# Environment
+.env
+*.env
+
+# Go build output
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go module cache
+vendor/
+
+# Swagger generated docs (regenerated saat build)
+docs/docs.go
+docs/swagger.json
+docs/swagger.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
