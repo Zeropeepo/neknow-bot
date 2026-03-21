@@ -8,7 +8,7 @@ import(
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	
-	"internal/auth/domain"
+	"github.com/Zeropeepo/neknow-bot/internal/auth/domain"
 )
 
 type authRepository struct{
