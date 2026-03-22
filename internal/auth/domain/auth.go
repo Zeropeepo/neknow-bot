@@ -1,9 +1,11 @@
 package domain
 
+
 import (
 	"context"
 	"time"
 )
+
 
 type User struct {
 	ID				string

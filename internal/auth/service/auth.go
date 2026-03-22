@@ -36,7 +36,7 @@ func (s *authService) generateToken(user *domain.User, expiry time.Duration, tok
 	return token.SignedString([]byte(s.cfg.JWT.Secret))
 }
 
-func (s *authService) parseToken(ctx context.Context, tokenStr string) (jwt.MapClaims, error) {
+func (s *authService) parseToken(tokenStr string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
