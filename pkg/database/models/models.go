@@ -27,3 +27,20 @@ type Bot struct {
 
 func (Bot) TableName() string { return "bots" }
 
+type File struct {
+	ID        string `gorm:"primaryKey"`
+	BotID     string `gorm:"not null;index"`
+	UserID    string `gorm:"not null;index"`
+	Name      string `gorm:"not null"`
+	Size      int64
+	MimeType  string
+	Bucket    string `gorm:"not null"`
+	ObjectKey string `gorm:"not null"`
+	Status    string `gorm:"not null;default:'pending'"`
+	ErrorMsg  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (File) TableName() string { return "files" }
+

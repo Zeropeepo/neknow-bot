@@ -12,6 +12,13 @@ import (
 	botHandler "github.com/Zeropeepo/neknow-bot/internal/bot/handler"
 	botRepo    "github.com/Zeropeepo/neknow-bot/internal/bot/repository"
 	botService "github.com/Zeropeepo/neknow-bot/internal/bot/service"
+
+	fileHandler    "github.com/Zeropeepo/neknow-bot/internal/files/handler"
+    fileRepository "github.com/Zeropeepo/neknow-bot/internal/files/repository"
+    fileService    "github.com/Zeropeepo/neknow-bot/internal/files/service"
+    
+	"github.com/Zeropeepo/neknow-bot/pkg/queue"
+    "github.com/Zeropeepo/neknow-bot/pkg/storage"
 	"github.com/Zeropeepo/neknow-bot/pkg/config"
 	"github.com/Zeropeepo/neknow-bot/pkg/database"
 	"github.com/Zeropeepo/neknow-bot/pkg/middleware"
@@ -42,6 +49,23 @@ func main() {
 	botSvc := botService.NewBotService(botRepo, cfg)
 	botHdlr := botHandler.NewBotHandler(botSvc)
 
+	// Storage
+	minioStorage, err := storage.NewMinIOStorage(cfg)
+	if err != nil {
+		log.Fatalf("failed to initialize MinIO: %v", err)
+	}
+
+	// Queue
+	rabbitMQ, err := queue.NewRabbitMQ(cfg)
+	if err != nil {
+		log.Fatalf("failed to initialize RabbitMQ: %v", err)
+	}
+
+	// Files
+	fileRepo := fileRepository.NewFileRepository(db)
+	fileSvc := fileService.NewFileService(fileRepo, botRepo, minioStorage, rabbitMQ, cfg.MinIO.Bucket)
+	fileHdlr := fileHandler.NewFileHandler(fileSvc)
+
 	r := gin.Default()
 
 	api := r.Group("/api/v1")
@@ -65,6 +89,11 @@ func main() {
 				bots.GET("/:id", botHdlr.GetByID)
 				bots.PUT("/:id", botHdlr.Update)
 				bots.DELETE("/:id", botHdlr.Delete)
+
+				bots.POST("/:id/files", fileHdlr.Upload)
+				bots.GET("/:id/files", fileHdlr.GetAll)
+				bots.GET("/:id/files/:file_id", fileHdlr.GetByID)
+				bots.DELETE("/:id/files/:file_id", fileHdlr.Delete)
 			}
 		}
 	}
