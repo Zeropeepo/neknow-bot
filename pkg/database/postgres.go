@@ -11,7 +11,7 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 )
 
-func NewPostgres(cfg *config.Config) *gorm.DB{
+func NewPostgres(cfg *config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Jakarta",
 		cfg.Database.Host,
@@ -30,6 +30,7 @@ func NewPostgres(cfg *config.Config) *gorm.DB{
 	db, err := gorm.Open(postgres.Open(dsn), gormCfg)
 	if err != nil{
 		logger.Fatal("failed connect to postgres", zap.Error(err))
+		return nil, err
 	}
 
 	sqlDB, err := db.DB()
@@ -40,5 +41,5 @@ func NewPostgres(cfg *config.Config) *gorm.DB{
 	sqlDB.SetMaxIdleConns(10)
 
 	logger.Info("postgres connected successfully")
-	return db
+	return db, nil
 }

@@ -37,7 +37,7 @@ func (h *AuthHandler) Register(c *gin.Context){
 	user, err := h.service.Register(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		if err.Error() == "email already exists" {
-			response.BadRequest(c, "email already exists")
+			response.Conflict(c, "email already exists")
 		}
 		response.InternalError(c)
 		return
@@ -63,7 +63,7 @@ func (h *AuthHandler) Login(c *gin.Context){
 
 	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		if err.Error() == "invalid credentials" {
+		if err.Error() == "invalid email or password" {
 			response.Unauthorized(c)
 			return
 		}

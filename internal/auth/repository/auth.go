@@ -9,29 +9,21 @@ import(
 	"gorm.io/gorm"
 	
 	"github.com/Zeropeepo/neknow-bot/internal/auth/domain"
+	"github.com/Zeropeepo/neknow-bot/pkg/database/models"
+
 )
 
 type authRepository struct{
 	db *gorm.DB
 }
 
-type gormUser struct{
-	ID				string	`gorm:"primaryKey"`
-	Email			string	`gorm:"uniqueIndex;not null"`
-	PasswordHash	string	`gorm:"not null"`
-	CreatedAt		time.Time
-	UpdatedAt		time.Time
-}
-
-func (gormUser)	TableName() string {return "users"}
-
 func NewAuthRepository(db *gorm.DB) domain.Repository {
 	return &authRepository{db: db}
 }
 
 // Mapper
-func toGormUser(u *domain.User) *gormUser {
-	return &gormUser{
+func toModel(u *domain.User) *models.User {
+	return &models.User{
 		ID:				u.ID,
 		Email:			u.Email,
 		PasswordHash: 	u.PasswordHash,
@@ -40,7 +32,7 @@ func toGormUser(u *domain.User) *gormUser {
 	}
 }
 
-func toDomainUser(g *gormUser) *domain.User{
+func toDomainUser(g *models.User) *domain.User{
 	return &domain.User{
 		ID:				g.ID,
 		Email:			g.Email,
@@ -57,12 +49,12 @@ func (r *authRepository) Create(ctx context.Context, user *domain.User) error {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 
-	dbUser := toGormUser(user)
+	dbUser := toModel(user)
 	return r.db.WithContext(ctx).Create(dbUser).Error
 }
 
 func (r *authRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error){
-	var dbUser gormUser
+	var dbUser models.User
 	result := r.db.WithContext(ctx).Where("email = ?", email).First(&dbUser)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound){
@@ -77,7 +69,7 @@ func (r *authRepository) FindByEmail(ctx context.Context, email string) (*domain
 }
 
 func (r *authRepository) FindByID(ctx context.Context, id string) (*domain.User, error){
-	var dbUser gormUser
+	var dbUser models.User
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&dbUser)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound){

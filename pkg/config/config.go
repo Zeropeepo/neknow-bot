@@ -5,7 +5,8 @@ import (
 	"os"
 	"strconv"
 	"time"
-
+	"strings"
+	
 	"github.com/joho/godotenv"
 )
 
@@ -17,6 +18,7 @@ type Config struct{
 	MinIO			MinIOConfig
 	JWT				JWTConfig
 	AI				AIConfig
+	Bot				BotConfig
 }
 
 type AppConfig struct{
@@ -60,8 +62,12 @@ type AIConfig struct{
 	ServiceURL	string
 }
 
+type BotConfig struct{
+	AllowedModels []string 
+}
 
-func Load() *Config {
+
+func Load() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
@@ -76,7 +82,7 @@ func Load() *Config {
 		refreshExpiry = 168 * time.Hour
 	}
 	
-	return &Config{
+	cfg := &Config{
 		App: AppConfig{
 			Port: 	getEnv("APP_PORT", "8080"),
 			Env:  	getEnv("APP_ENV", "development"),
@@ -107,13 +113,21 @@ func Load() *Config {
 			Secret:        getEnv("JWT_SECRET", ""),
 			AccessExpiry:  accessExpiry,
 			RefreshExpiry: refreshExpiry,
-		},
+		}, 
 		AI: AIConfig{
 			ServiceURL: getEnv("AI_SERVICE_URL", "http://localhost:8000"),
 		},
+		Bot: BotConfig{
+			AllowedModels: getEnvSlice("ALLOWED_MODELS", []string{
+			"gpt-4o", 
+			"gpt-4o-mini",
+		}),
+		},
 	}
+	return cfg, nil
 }
 
+// Helper
 func getEnv(key string, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -129,6 +143,22 @@ func getEnvBool(key string, fallback bool) bool {
 	result, err := strconv.ParseBool(val)
 	if err != nil {
 		return fallback
+	}
+	return result
+}
+
+func getEnvSlice(key string, fallback []string) []string {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	parts := strings.Split(val, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
 	}
 	return result
 }

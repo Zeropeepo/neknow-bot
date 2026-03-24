@@ -112,7 +112,7 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 }
 
 func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
-	claims, err := s.parseToken(ctx, refreshToken)
+	claims, err := s.parseToken(refreshToken)
 	if err != nil {
 		return "", errors.New("invalid refresh token")
 	}
@@ -130,7 +130,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (st
 }
 
 func (s *authService) ValidateToken(ctx context.Context, token string) (*domain.TokenClaims, error) {
-	claims, err := s.parseToken(ctx, token)
+	claims, err := s.parseToken(token)
 	if err != nil {
 		return nil, errors.New("invalid token")
 	}

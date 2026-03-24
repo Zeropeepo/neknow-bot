@@ -1,6 +1,7 @@
 # Environment
 .env
 *.env
+.env.*
 
 # Go build output
 /bin/
@@ -35,3 +36,22 @@ docker-compose.override.yml
 
 # Logs
 *.log
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# uv & Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Worker specific
+worker/.venv/
+worker/__pycache__/
+
