@@ -6,22 +6,27 @@ import (
 	"github.com/gin-gonic/gin"
 
 	authHandler "github.com/Zeropeepo/neknow-bot/internal/auth/handler"
-	authRepo    "github.com/Zeropeepo/neknow-bot/internal/auth/repository"
+	authRepo "github.com/Zeropeepo/neknow-bot/internal/auth/repository"
 	authService "github.com/Zeropeepo/neknow-bot/internal/auth/service"
 
 	botHandler "github.com/Zeropeepo/neknow-bot/internal/bot/handler"
-	botRepo    "github.com/Zeropeepo/neknow-bot/internal/bot/repository"
+	botRepo "github.com/Zeropeepo/neknow-bot/internal/bot/repository"
 	botService "github.com/Zeropeepo/neknow-bot/internal/bot/service"
 
-	fileHandler    "github.com/Zeropeepo/neknow-bot/internal/files/handler"
-    fileRepository "github.com/Zeropeepo/neknow-bot/internal/files/repository"
-    fileService    "github.com/Zeropeepo/neknow-bot/internal/files/service"
-    
-	"github.com/Zeropeepo/neknow-bot/pkg/queue"
-    "github.com/Zeropeepo/neknow-bot/pkg/storage"
+	fileHandler "github.com/Zeropeepo/neknow-bot/internal/files/handler"
+	fileRepository "github.com/Zeropeepo/neknow-bot/internal/files/repository"
+	fileService "github.com/Zeropeepo/neknow-bot/internal/files/service"
+
+	chatHandler "github.com/Zeropeepo/neknow-bot/internal/chat/handler"
+	chatRepo "github.com/Zeropeepo/neknow-bot/internal/chat/repository"
+	chatService "github.com/Zeropeepo/neknow-bot/internal/chat/service"
+	"github.com/Zeropeepo/neknow-bot/pkg/ai"
+
 	"github.com/Zeropeepo/neknow-bot/pkg/config"
 	"github.com/Zeropeepo/neknow-bot/pkg/database"
 	"github.com/Zeropeepo/neknow-bot/pkg/middleware"
+	"github.com/Zeropeepo/neknow-bot/pkg/queue"
+	"github.com/Zeropeepo/neknow-bot/pkg/storage"
 )
 
 func main() {
@@ -41,13 +46,20 @@ func main() {
 
 	// Auth
 	aRepo := authRepo.NewAuthRepository(db)
-	aSvc  := authService.NewAuthService(aRepo, cfg)
+	aSvc := authService.NewAuthService(aRepo, cfg)
 	aHdlr := authHandler.NewAuthHandler(aSvc)
 
 	// Bots
 	botRepo := botRepo.NewBotRepository(db)
 	botSvc := botService.NewBotService(botRepo, cfg)
 	botHdlr := botHandler.NewBotHandler(botSvc)
+
+	// Chat
+	ragClient := ai.NewRAGClient(cfg)
+	convRepo := chatRepo.NewConversationRepository(db)
+	msgRepo := chatRepo.NewMessageRepository(db)
+	cService := chatService.NewChatService(convRepo, msgRepo, botRepo, ragClient)
+	cHandler := chatHandler.NewChatHandler(cService)
 
 	// Storage
 	minioStorage, err := storage.NewMinIOStorage(cfg)
@@ -73,8 +85,8 @@ func main() {
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", aHdlr.Register)
-			auth.POST("/login",    aHdlr.Login)
-			auth.POST("/refresh",  aHdlr.RefreshToken)
+			auth.POST("/login", aHdlr.Login)
+			auth.POST("/refresh", aHdlr.RefreshToken)
 		}
 
 		protected := api.Group("/")
@@ -94,7 +106,14 @@ func main() {
 				bots.GET("/:id/files", fileHdlr.GetAll)
 				bots.GET("/:id/files/:file_id", fileHdlr.GetByID)
 				bots.DELETE("/:id/files/:file_id", fileHdlr.Delete)
+
+				bots.POST("/:id/conversations", cHandler.CreateConversation)
+				bots.GET("/:id/conversations", cHandler.GetConversations)
+				bots.GET("/:id/conversations/:conv_id", cHandler.GetConversation)
+				bots.POST("/:id/conversations/:conv_id/messages", cHandler.SendMessage)
+				bots.DELETE("/:id/conversations/:conv_id", cHandler.DeleteConversation)
 			}
+
 		}
 	}
 

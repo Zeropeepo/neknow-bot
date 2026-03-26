@@ -44,3 +44,23 @@ type File struct {
 
 func (File) TableName() string { return "files" }
 
+type Conversation struct {
+	ID        string `gorm:"primaryKey"`
+	BotID     string `gorm:"not null;index"`
+	UserID    string `gorm:"not null;index"`
+	Title     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (Conversation) TableName() string { return "conversations" }
+
+type Message struct {
+	ID             string `gorm:"primaryKey"`
+	ConversationID string `gorm:"not null;index"`
+	Role           string `gorm:"not null"`
+	Content        string `gorm:"not null;type:text"`
+	CreatedAt      time.Time
+}
+
+func (Message) TableName() string { return "messages" }

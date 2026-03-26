@@ -13,6 +13,8 @@ func Migrate(db *gorm.DB) error {
 		&models.User{},
 		&models.Bot{},
 		&models.File{},
+		&models.Conversation{},
+		&models.Message{},
 	); err != nil {
 		return fmt.Errorf("failed to migrate: %w", err)
 	}
