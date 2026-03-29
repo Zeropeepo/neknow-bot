@@ -55,3 +55,23 @@ ENV/
 worker/.venv/
 worker/__pycache__/
 
+# Go workspace & coverage
+go.work
+go.work.sum
+coverage.txt
+profile.out
+
+# Python build & distribution
+dist/
+build/
+*.egg-info/
+
+# Python testing & coverage
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+
+# Local development tools
+.envrc
+

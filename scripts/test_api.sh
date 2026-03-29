@@ -27,7 +27,6 @@ cleanup() {
   echo -e "  Cleanup"
   echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-  # Hapus semua bot yang dibuat selama test
   for bot_id in "${CREATED_BOT_IDS[@]}"; do
     RESP=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
       "$BASE_URL/bots/$bot_id" \
@@ -35,13 +34,12 @@ cleanup() {
     if [ "$RESP" -eq 200 ] || [ "$RESP" -eq 404 ]; then
       echo -e "  ${GREEN}✓${NC} Bot $bot_id deleted"
     else
-      echo -e "  ${YELLOW}~${NC} Bot $bot_id → HTTP $RESP (mungkin sudah terhapus)"
+      echo -e "  ${YELLOW}~${NC} Bot $bot_id → HTTP $RESP"
     fi
   done
 
-  # Hapus test users langsung via DB
   echo -e "  Cleaning up test users from DB..."
-  PGPASSWORD="${DB_PASSWORD:-postgres}" psql \
+  PGPASSWORD="${DB_PASSWORD:-neknowbot123}" psql \
     -h "${DB_HOST:-localhost}" \
     -p "${DB_PORT:-5432}" \
     -U "${DB_USER:-neknowbot}" \
@@ -52,15 +50,13 @@ cleanup() {
   if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}✓${NC} Test users deleted ($EMAIL, $EMAIL2)"
   else
-    echo -e "  ${YELLOW}~${NC} DB cleanup skipped (cek DB_* env vars di bawah)"
-    echo -e "  Manual cleanup:"
-    echo -e "  DELETE FROM users WHERE email LIKE '%_${TS}@test.com';"
+    echo -e "  ${YELLOW}~${NC} DB cleanup skipped"
+    echo -e "  Manual: DELETE FROM users WHERE email LIKE '%_${TS}@test.com';"
   fi
 
   echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
-# Jalankan cleanup di akhir atau saat interrupt
 trap cleanup EXIT
 
 # ─── Helpers ─────────────────────────────────────────────
@@ -183,22 +179,22 @@ assert_status "Get me without token" 401 "$STATUS" "$BODY"
 print_section "BOT — Create"
 # ════════════════════════════════════════
 
-call POST "/bots/" "{
+call POST "/bots" "{
   \"name\": \"Test Bot\",
   \"description\": \"Bot untuk testing\",
   \"system_prompt\": \"Kamu adalah asisten yang membantu menjawab pertanyaan dengan baik.\",
-  \"model\": \"gpt-4o-mini\",
+  \"model\": \"gemini-2.0-flash\",
   \"is_public\": false
 }" "$USER1_TOKEN"
 assert_status "Create bot valid" 201 "$STATUS" "$BODY"
 
 BOT_ID=$(echo "$BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 if [ -n "$BOT_ID" ]; then
-  CREATED_BOT_IDS+=("$BOT_ID")  # ← track untuk cleanup
+  CREATED_BOT_IDS+=("$BOT_ID")
   echo -e "  ${GREEN}Bot ID: $BOT_ID ✓${NC}"
 fi
 
-call POST "/bots/" "{
+call POST "/bots" "{
   \"name\": \"Test Bot\",
   \"system_prompt\": \"Kamu adalah asisten yang membantu menjawab pertanyaan.\",
   \"model\": \"gpt-99-ultra\",
@@ -206,24 +202,24 @@ call POST "/bots/" "{
 }" "$USER1_TOKEN"
 assert_status "Create bot invalid model" 400 "$STATUS" "$BODY"
 
-call POST "/bots/" "{
+call POST "/bots" "{
   \"name\": \"Test Bot\",
   \"system_prompt\": \"\",
-  \"model\": \"gpt-4o-mini\"
+  \"model\": \"gemini-2.0-flash\"
 }" "$USER1_TOKEN"
 assert_status "Create bot empty system_prompt" 400 "$STATUS" "$BODY"
 
-call POST "/bots/" "{
+call POST "/bots" "{
   \"name\": \"Test Bot\",
   \"system_prompt\": \"Hi\",
-  \"model\": \"gpt-4o-mini\"
+  \"model\": \"gemini-2.0-flash\"
 }" "$USER1_TOKEN"
 assert_status "Create bot short system_prompt" 400 "$STATUS" "$BODY"
 
-call POST "/bots/" "{
+call POST "/bots" "{
   \"name\": \"Test Bot\",
   \"system_prompt\": \"Kamu adalah asisten yang membantu menjawab pertanyaan.\",
-  \"model\": \"gpt-4o-mini\"
+  \"model\": \"gemini-2.0-flash\"
 }" ""
 assert_status "Create bot without token" 401 "$STATUS" "$BODY"
 
@@ -231,10 +227,10 @@ assert_status "Create bot without token" 401 "$STATUS" "$BODY"
 print_section "BOT — Get All"
 # ════════════════════════════════════════
 
-call GET "/bots/" "" "$USER1_TOKEN"
+call GET "/bots" "" "$USER1_TOKEN"
 assert_status "Get all bots" 200 "$STATUS" "$BODY"
 
-call GET "/bots/" "" ""
+call GET "/bots" "" ""
 assert_status "Get all bots without token" 401 "$STATUS" "$BODY"
 
 # ════════════════════════════════════════
@@ -262,7 +258,7 @@ if [ -n "$BOT_ID" ]; then
   call PUT "/bots/$BOT_ID" '{"name": "Updated Bot Name"}' "$USER1_TOKEN"
   assert_status "Update bot name only" 200 "$STATUS" "$BODY"
 
-  call PUT "/bots/$BOT_ID" '{"model": "gpt-4o"}' "$USER1_TOKEN"
+  call PUT "/bots/$BOT_ID" '{"model": "gemini-2.0-flash"}' "$USER1_TOKEN"
   assert_status "Update bot model valid" 200 "$STATUS" "$BODY"
 
   call PUT "/bots/$BOT_ID" '{"model": "gpt-99-ultra"}' "$USER1_TOKEN"
@@ -304,6 +300,148 @@ if [ -n "$BOT_ID" ] && [ -n "$USER2_TOKEN" ]; then
 fi
 
 # ════════════════════════════════════════
+print_section "FILES — Upload & Indexing"
+# ════════════════════════════════════════
+
+call POST "/bots" '{
+  "name": "RAG Test Bot",
+  "description": "Test RAG",
+  "system_prompt": "Kamu adalah asisten yang menjawab berdasarkan dokumen.",
+  "model": "gemini-2.0-flash"
+}' "$USER1_TOKEN"
+assert_status "Create bot for RAG test" 201 "$STATUS" "$BODY"
+
+RAG_BOT_ID=$(echo "$BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+[ -n "$RAG_BOT_ID" ] && CREATED_BOT_IDS+=("$RAG_BOT_ID")
+echo -e "  ${GREEN}RAG Bot ID: $RAG_BOT_ID ✓${NC}"
+
+TEST_FILE="/tmp/neknow_test_${TS}.txt"
+cat > $TEST_FILE << 'EOF'
+Neknow Bot adalah chatbot berbasis RAG (Retrieval Augmented Generation).
+Sistem ini mendukung PDF, DOCX, TXT, dan CSV.
+Fitur utama: hybrid search, reranking Cohere, streaming SSE.
+Teknologi yang digunakan: pgvector, RabbitMQ, MinIO, Gemini AI.
+EOF
+
+# Upload valid
+UPLOAD_RESP=$(curl -s -w "\n%{http_code}" -X POST \
+  "$BASE_URL/bots/$RAG_BOT_ID/files" \
+  -H "Authorization: Bearer $USER1_TOKEN" \
+  -F "file=@$TEST_FILE")
+BODY=$(echo "$UPLOAD_RESP" | head -n -1)
+STATUS=$(echo "$UPLOAD_RESP" | tail -n 1)
+assert_status "Upload valid file" 201 "$STATUS" "$BODY"
+
+FILE_ID=$(echo "$BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+echo -e "  ${GREEN}File ID: $FILE_ID ✓${NC}"
+
+# Upload tanpa token
+UPLOAD_RESP=$(curl -s -w "\n%{http_code}" -X POST \
+  "$BASE_URL/bots/$RAG_BOT_ID/files" \
+  -F "file=@$TEST_FILE")
+BODY=$(echo "$UPLOAD_RESP" | head -n -1)
+STATUS=$(echo "$UPLOAD_RESP" | tail -n 1)
+assert_status "Upload file without token" 401 "$STATUS" "$BODY"
+
+# Polling indexing status
+if [ -n "$FILE_ID" ]; then
+  echo -e "  Waiting for indexing (max 60s)..."
+  INDEXED=0
+  for i in {1..20}; do
+    STATUS_RESP=$(curl -s "$BASE_URL/bots/$RAG_BOT_ID/files/$FILE_ID" \
+      -H "Authorization: Bearer $USER1_TOKEN")
+    FILE_STATUS=$(echo "$STATUS_RESP" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+    echo -e "  Attempt $i — status: $FILE_STATUS"
+
+    if [ "$FILE_STATUS" = "indexed" ]; then
+      echo -e "  ${GREEN}✓ File indexed!${NC}"
+      PASS=$((PASS + 1))
+      INDEXED=1
+      break
+    elif [ "$FILE_STATUS" = "failed" ]; then
+      echo -e "  ${RED}✗ Indexing failed!${NC}"
+      echo -e "  Response: $STATUS_RESP"
+      FAIL=$((FAIL + 1))
+      break
+    fi
+    sleep 3
+  done
+  [ $INDEXED -eq 0 ] && [ "$FILE_STATUS" != "failed" ] && {
+    echo -e "  ${RED}✗ Indexing timeout!${NC}"
+    FAIL=$((FAIL + 1))
+  }
+fi
+
+call GET "/bots/$RAG_BOT_ID/files" "" "$USER1_TOKEN"
+assert_status "List files" 200 "$STATUS" "$BODY"
+
+if [ -n "$FILE_ID" ]; then
+  call GET "/bots/$RAG_BOT_ID/files/$FILE_ID" "" "$USER1_TOKEN"
+  assert_status "Get file by ID" 200 "$STATUS" "$BODY"
+
+  call GET "/bots/$RAG_BOT_ID/files/$FILE_ID" "" ""
+  assert_status "Get file without token" 401 "$STATUS" "$BODY"
+fi
+
+rm -f $TEST_FILE
+
+# ════════════════════════════════════════
+print_section "CHAT — Conversation & RAG"
+# ════════════════════════════════════════
+
+call POST "/bots/$RAG_BOT_ID/conversations" \
+  '{"title":"Test Conversation"}' "$USER1_TOKEN"
+assert_status "Create conversation" 201 "$STATUS" "$BODY"
+
+CONV_ID=$(echo "$BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+echo -e "  ${GREEN}Conv ID: $CONV_ID ✓${NC}"
+
+call POST "/bots/$RAG_BOT_ID/conversations" '{"title":"Test"}' ""
+assert_status "Create conversation without token" 401 "$STATUS" "$BODY"
+
+if [ -n "$CONV_ID" ]; then
+  echo -e "\n  ${YELLOW}--- RAG Stream Output ---${NC}"
+  curl -s -X POST "$BASE_URL/bots/$RAG_BOT_ID/conversations/$CONV_ID/messages" \
+    -H "Authorization: Bearer $USER1_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"content":"Apa itu Neknow Bot?"}' \
+    --no-buffer
+  echo -e "\n  ${YELLOW}--- End Stream ---${NC}"
+  PASS=$((PASS + 1))
+  echo -e "${GREEN}✓ PASS${NC} [Send first message RAG]"
+
+  echo -e "\n  ${YELLOW}--- Follow-up Stream ---${NC}"
+  curl -s -X POST "$BASE_URL/bots/$RAG_BOT_ID/conversations/$CONV_ID/messages" \
+    -H "Authorization: Bearer $USER1_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"content":"Fitur apa saja yang ada?"}' \
+    --no-buffer
+  echo -e "\n  ${YELLOW}--- End Stream ---${NC}"
+  PASS=$((PASS + 1))
+  echo -e "${GREEN}✓ PASS${NC} [Send follow-up message]"
+
+  SEND_RESP=$(curl -s -w "\n%{http_code}" -X POST \
+    "$BASE_URL/bots/$RAG_BOT_ID/conversations/$CONV_ID/messages" \
+    -H "Content-Type: application/json" \
+    -d '{"content":"Hacked"}')
+  BODY=$(echo "$SEND_RESP" | head -n -1)
+  STATUS=$(echo "$SEND_RESP" | tail -n 1)
+  assert_status "Send message without token" 401 "$STATUS" "$BODY"
+
+  call GET "/bots/$RAG_BOT_ID/conversations" "" "$USER1_TOKEN"
+  assert_status "List conversations" 200 "$STATUS" "$BODY"
+
+  call GET "/bots/$RAG_BOT_ID/conversations/$CONV_ID" "" "$USER1_TOKEN"
+  assert_status "Get conversation" 200 "$STATUS" "$BODY"
+
+  call DELETE "/bots/$RAG_BOT_ID/conversations/$CONV_ID" "" "$USER1_TOKEN"
+  assert_status "Delete conversation" 200 "$STATUS" "$BODY"
+
+  call DELETE "/bots/$RAG_BOT_ID/conversations/$CONV_ID" "" "$USER1_TOKEN"
+  assert_status "Delete already deleted conversation" 404 "$STATUS" "$BODY"
+fi
+
+# ════════════════════════════════════════
 print_section "BOT — Delete"
 # ════════════════════════════════════════
 
@@ -316,7 +454,6 @@ if [ -n "$BOT_ID" ]; then
 
   call DELETE "/bots/$BOT_ID" "" "$USER1_TOKEN"
   assert_status "Delete bot valid" 200 "$STATUS" "$BODY"
-  # Hapus dari tracking karena sudah terhapus
   CREATED_BOT_IDS=("${CREATED_BOT_IDS[@]/$BOT_ID}")
 
   call DELETE "/bots/$BOT_ID" "" "$USER1_TOKEN"

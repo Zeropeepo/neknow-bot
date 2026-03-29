@@ -51,7 +51,7 @@ func (h *ChatHandler) CreateConversation(c *gin.Context) {
 }
 
 func (h *ChatHandler) GetConversations(c *gin.Context) {
-	botID := c.Param("conv_id")
+	botID := c.Param("id")
 	userID := c.GetString(middleware.UserIDKey)
 
 	convs, err := h.service.GetConversations(c.Request.Context(), userID, botID)
@@ -164,7 +164,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 }
 
 func (h *ChatHandler) DeleteConversation(c *gin.Context) {
-	convID := c.Param("id")
+	convID := c.Param("conv_id")
 	userID := c.GetString(middleware.UserIDKey)
 
 	err := h.service.DeleteConversation(c.Request.Context(), userID, convID)

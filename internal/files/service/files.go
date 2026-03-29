@@ -23,6 +23,9 @@ var (
 	allowedMimeTypes = map[string]bool{
 		"application/pdf": true,
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
+
+		"text/plain": true,
+		"text/csv":   true,
 	}
 	maxFileSize = int64(20 * 1024 * 1024) // 20MB
 )

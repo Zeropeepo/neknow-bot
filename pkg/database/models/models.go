@@ -64,3 +64,15 @@ type Message struct {
 }
 
 func (Message) TableName() string { return "messages" }
+
+type FileChunk struct {
+	ID		string 		`gorm:"primaryKey"`
+	FileID  string 		`gorm:"not null;index"`
+	BotID      string    `gorm:"not null;index"`
+    Content    string    `gorm:"not null;type:text"`
+    Embedding  string    `gorm:"type:vector(3072)"`
+    ChunkIndex int       `gorm:"not null"`
+    CreatedAt  time.Time
+}
+
+func (FileChunk) TableName() string { return "file_chunks" }

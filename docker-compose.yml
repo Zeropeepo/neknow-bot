@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: neknowbot_postgres
     environment:
       POSTGRES_USER: neknowbot
@@ -63,6 +63,79 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  go_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neknowbot_go_api
+    env_file: ./.env
+    environment:
+      # Override localhost → nama service Docker
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      MINIO_ENDPOINT: minio:9000
+      AI_SERVICE_URL: http://python_api:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      python_api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  python_api:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: neknowbot_python_api
+    command: uvicorn src.api.rag:app --host 0.0.0.0 --port 8000
+    env_file: ./.env
+    environment:
+      DB_HOST: postgres
+      MINIO_ENDPOINT: minio:9000
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  python_worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: neknowbot_python_worker
+    command: python main.py
+    env_file: ./.env
+    environment:
+      DB_HOST: postgres
+      MINIO_ENDPOINT: minio:9000
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

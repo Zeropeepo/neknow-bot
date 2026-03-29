@@ -1,0 +1,35 @@
+# Web
+fastapi
+uvicorn[standard]
+
+# Config
+pydantic-settings
+
+# Logging
+structlog
+
+# Queue
+aio-pika
+
+# Database
+asyncpg
+pgvector
+
+# Storage
+minio
+
+# AI - Google
+google-genai
+
+# AI - Cohere
+cohere
+
+# Document Processing
+unstructured[pdf,docx]
+pypdf
+python-docx
+pandas
+
+# Chunking
+langchain-text-splitters
+tiktoken

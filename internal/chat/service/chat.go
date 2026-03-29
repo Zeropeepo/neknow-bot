@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/Zeropeepo/neknow-bot/internal/chat/domain"
 	botDomain "github.com/Zeropeepo/neknow-bot/internal/bot/domain"
+	"github.com/Zeropeepo/neknow-bot/internal/chat/domain"
 	"github.com/Zeropeepo/neknow-bot/pkg/ai"
 )
 
@@ -15,7 +15,7 @@ var (
 	ErrUnauthorized         = errors.New("unauthorized")
 )
 
-const historyLimit = 10 
+const historyLimit = 10
 
 type chatService struct {
 	convRepo domain.ConversationRepository
@@ -85,7 +85,7 @@ func (s *chatService) GetConversation(ctx context.Context, userID, convID string
 		return nil, nil, ErrUnauthorized
 	}
 
-	messages, err := s.msgRepo.FindByConversationID(ctx, convID, 50) // ambil 50 pesan untuk detail view
+	messages, err := s.msgRepo.FindByConversationID(ctx, convID, 50)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -109,15 +109,6 @@ func (s *chatService) SendMessage(ctx context.Context, userID, convID string, co
 		return nil, err
 	}
 
-	userMsg := &domain.Message{
-		ConversationID: convID,
-		Role:           domain.RoleUser,
-		Content:        content,
-	}
-	if err := s.msgRepo.Create(ctx, userMsg); err != nil {
-		return nil, err
-	}
-
 	history, err := s.msgRepo.FindByConversationID(ctx, convID, historyLimit)
 	if err != nil {
 		return nil, err
@@ -125,13 +116,19 @@ func (s *chatService) SendMessage(ctx context.Context, userID, convID string, co
 
 	historyMessages := make([]domain.HistoryMessage, 0, len(history))
 	for _, msg := range history {
-		if msg.ID == userMsg.ID {
-			continue 
-		}
 		historyMessages = append(historyMessages, domain.HistoryMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
 		})
+	}
+
+	userMsg := &domain.Message{
+		ConversationID: convID,
+		Role:           domain.RoleUser,
+		Content:        content,
+	}
+	if err := s.msgRepo.Create(ctx, userMsg); err != nil {
+		return nil, err
 	}
 
 	tokenCh, err := s.rag.Stream(ctx, domain.RAGRequest{

@@ -3,7 +3,7 @@ import json
 import structlog
 import aio_pika
 from src.config import settings
-from src.storage.minio import minio_client
+from src.storage.minio import download_document
 from src.storage.vector_store import insert_chunks, update_file_status
 from src.processor.parser import parse_document
 from src.processor.chunker import chunk_text
@@ -24,7 +24,7 @@ async def process_document(message_body: dict):
         await update_file_status(file_id, "indexing")
         log.info("indexing_started")
 
-        content = minio_client.download(object_key)
+        content = await download_document(object_key)
         log.info("file_downloaded", size_bytes=len(content))
 
         text = parse_document(content, filename)
@@ -67,6 +67,6 @@ async def start_consumer():
 
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
-                async with message.process(requeue_on_error=True):
+                async with message.process(requeue=True):
                     body = json.loads(message.body.decode())
                     await process_document(body)

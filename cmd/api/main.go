@@ -79,6 +79,11 @@ func main() {
 	fileHdlr := fileHandler.NewFileHandler(fileSvc)
 
 	r := gin.Default()
+	r.RedirectTrailingSlash = false 
+	
+	 r.GET("/health", func(c *gin.Context) {
+        c.JSON(200, gin.H{"status": "ok"})
+    })
 
 	api := r.Group("/api/v1")
 	{
@@ -96,8 +101,8 @@ func main() {
 
 			bots := protected.Group("/bots")
 			{
-				bots.POST("/", botHdlr.Create)
-				bots.GET("/", botHdlr.GetAll)
+				bots.POST("", botHdlr.Create)
+				bots.GET("", botHdlr.GetAll)
 				bots.GET("/:id", botHdlr.GetByID)
 				bots.PUT("/:id", botHdlr.Update)
 				bots.DELETE("/:id", botHdlr.Delete)

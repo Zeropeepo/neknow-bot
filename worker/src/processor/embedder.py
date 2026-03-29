@@ -1,8 +1,10 @@
 from typing import List
-from openai import AsyncOpenAI
 from src.config import settings
+from google import genai
+from google.genai import types
 
-client = AsyncOpenAI(api_key=settings.openai_api_key)
+client = genai.Client(api_key=settings.gemini_api_key)  
+
 
 async def embed_texts(texts: List[str]) -> List[List[float]]:
     if not texts:
@@ -13,14 +15,24 @@ async def embed_texts(texts: List[str]) -> List[List[float]]:
 
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
-        response = await client.embeddings.create(
+        result = await client.aio.models.embed_content(
             model=settings.embedding_model,
-            input=batch,
+            contents=batch,
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_DOCUMENT",
+            ),
         )
-        embeddings = [
-            item.embedding
-            for item in sorted(response.data, key=lambda x: x.index)
-        ]
-        all_embeddings.extend(embeddings)
+        all_embeddings.extend([e.values for e in result.embeddings])
 
     return all_embeddings
+
+
+async def embed_query(text: str) -> List[float]:
+    result = await client.aio.models.embed_content( 
+        model=settings.embedding_model,
+        contents=text,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_QUERY",
+        ),
+    )
+    return result.embeddings[0].values
