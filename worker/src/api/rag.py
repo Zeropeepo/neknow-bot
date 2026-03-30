@@ -32,10 +32,10 @@ class RAGRequest(BaseModel):
 
 async def stream_response(request: RAGRequest) -> AsyncGenerator[str, None]:
 
-    # 1. Embed query
+    # Embed query
     query_embedding = await embed_query(request.query)
 
-    # 2. Hybrid search
+    # Hybrid search
     chunks = await hybrid_search(
         bot_id=request.bot_id,
         query_embedding=query_embedding,
@@ -58,7 +58,7 @@ async def stream_response(request: RAGRequest) -> AsyncGenerator[str, None]:
     else:
         top_chunks = []
 
-    # 4. Build prompt
+    # Build prompt
     context = "\n\n---\n\n".join(top_chunks) if top_chunks else "No relevant context found."
 
     system_instruction = f"{request.system_prompt}\n\nContext:\n{context}"
@@ -74,7 +74,7 @@ async def stream_response(request: RAGRequest) -> AsyncGenerator[str, None]:
         parts=[types.Part(text=request.query)]
     ))
 
-    # Stream dari Gemini
+    # Gemini stream
     async for chunk in await gemini_client.aio.models.generate_content_stream(
         model=settings.chat_model,
         contents=contents,

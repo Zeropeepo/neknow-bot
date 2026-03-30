@@ -1,0 +1,50 @@
+[
+  {
+    "question": "What architecture does the Transformer replace?",
+    "ground_truth": "The Transformer replaces recurrent (RNN/LSTM) and convolutional neural network architectures entirely, relying solely on attention mechanisms."
+  },
+  {
+    "question": "How many encoder and decoder layers does the base Transformer model have?",
+    "ground_truth": "The base Transformer model has 6 encoder layers and 6 decoder layers (N=6)."
+  },
+  {
+    "question": "What is the model dimension (d_model) used in the base model?",
+    "ground_truth": "The base model uses a model dimension of d_model = 512."
+  },
+  {
+    "question": "How many attention heads are used in multi-head attention?",
+    "ground_truth": "The base model uses h = 8 parallel attention heads."
+  },
+  {
+    "question": "What is the feed-forward network inner-layer dimension (d_ff)?",
+    "ground_truth": "The inner-layer dimension of the feed-forward networks is d_ff = 2048."
+  },
+  {
+    "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-German translation?",
+    "ground_truth": "The Transformer achieved 28.4 BLEU on WMT 2014 English-to-German translation, outperforming previous best models."
+  },
+  {
+    "question": "What BLEU score did the Transformer achieve on WMT 2014 English-to-French translation?",
+    "ground_truth": "The Transformer achieved 41.0 BLEU on WMT 2014 English-to-French, establishing a new single-model state-of-the-art."
+  },
+  {
+    "question": "What optimizer was used to train the Transformer?",
+    "ground_truth": "The Adam optimizer was used with beta1=0.9, beta2=0.98, and epsilon=1e-9, with a custom learning rate schedule (warmup steps)."
+  },
+  {
+    "question": "What dropout rate was applied during training?",
+    "ground_truth": "A dropout rate of P_drop = 0.1 was applied to the output of each sub-layer and to the sums of embeddings and positional encodings."
+  },
+  {
+    "question": "How does the Transformer encode the position of tokens?",
+    "ground_truth": "The Transformer uses positional encoding with sine and cosine functions of different frequencies, added to the input embeddings to inject information about token positions."
+  },
+  {
+    "question": "What is scaled dot-product attention?",
+    "ground_truth": "Scaled dot-product attention computes attention as Attention(Q,K,V) = softmax(QK^T / sqrt(d_k))V, where the scaling by sqrt(d_k) prevents vanishing gradients from large dot products."
+  },
+  {
+    "question": "How many GPUs and how long was the base model trained?",
+    "ground_truth": "The base model was trained on 8 P100 GPUs for 100,000 steps (approximately 12 hours)."
+  }
+]

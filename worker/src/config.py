@@ -1,9 +1,11 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
 
+ENV_FILE = Path(__file__).parent.parent.parent / ".env"
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_FILE,
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -26,10 +28,11 @@ class Settings(BaseSettings):
     minio_use_ssl: bool = False
     minio_bucket: str = "neknowbot-files"
 
-    # Gemini
+    # AI
+    groq_api_key: str = ""
     gemini_api_key: str        
     embedding_model: str = "gemini-embedding-001"
-    chat_model: str = "gemini-3.0-flash"
+    chat_model: str = "gemini-2.5-flash-lite"
 
     # Cohere
     cohere_api_key: str        
@@ -40,6 +43,8 @@ class Settings(BaseSettings):
     top_k_rerank: int = 5
     chunk_size: int = 512
     chunk_overlap: int = 50
+
+    
 
     @property
     def db_url(self) -> str:

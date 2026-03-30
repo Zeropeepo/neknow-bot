@@ -54,6 +54,11 @@ ENV/
 # Worker specific
 worker/.venv/
 worker/__pycache__/
+worker/eval/testset.json
+worker/eval/results.csv
+worker/eval/results.json
+worker/eval/.checkpoint.json
+worker/eval/results_ragas.csv
 
 # Go workspace & coverage
 go.work

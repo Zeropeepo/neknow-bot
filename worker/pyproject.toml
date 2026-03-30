@@ -24,6 +24,10 @@ dependencies = [
     "unstructured[pdf,docx]>=0.21.5",
     "pypdf>=6.9.2",
     "pandas>=3.0.1",
+    "ragas>=0.4.3",
+    "langchain-google-genai>=4.2.1",
+    "groq>=0.37.1",
+    "langchain-groq>=1.1.2",
 ]
 
 [dependency-groups]
