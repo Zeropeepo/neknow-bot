@@ -3,12 +3,13 @@ from src.config import settings
 from google import genai
 from google.genai import types
 
-client = genai.Client(api_key=settings.gemini_api_key)  
-
 
 async def embed_texts(texts: List[str]) -> List[List[float]]:
     if not texts:
         return []
+
+    # Build client inside coroutine so async sessions are created on the active event loop.
+    client = genai.Client(api_key=settings.gemini_api_key)
 
     all_embeddings = []
     batch_size = 100
@@ -28,6 +29,9 @@ async def embed_texts(texts: List[str]) -> List[List[float]]:
 
 
 async def embed_query(text: str) -> List[float]:
+    # Build client inside coroutine so async sessions are created on the active event loop.
+    client = genai.Client(api_key=settings.gemini_api_key)
+
     result = await client.aio.models.embed_content( 
         model=settings.embedding_model,
         contents=text,

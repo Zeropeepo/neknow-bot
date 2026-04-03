@@ -34,6 +34,10 @@ type SendMessageRequest struct {
 	Content string `json:"content" validate:"required,min=1,max=2000"`
 }
 
+type UpdateConversationRequest struct {
+	Title string `json:"title" validate:"required,min=1,max=100"`
+}
+
 // SSE event format
 type SSEEvent struct {
 	Content string `json:"content"`

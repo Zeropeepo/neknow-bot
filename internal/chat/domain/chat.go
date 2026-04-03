@@ -30,10 +30,10 @@ type Message struct {
 }
 
 type RAGRequest struct {
-	BotID       string
+	BotID        string
 	SystemPrompt string
-	Query       string
-	History     []HistoryMessage
+	Query        string
+	History      []HistoryMessage
 }
 
 type HistoryMessage struct {
@@ -46,6 +46,7 @@ type ConversationRepository interface {
 	FindByID(ctx context.Context, id string) (*Conversation, error)
 	FindByBotID(ctx context.Context, botID string) ([]*Conversation, error)
 	Delete(ctx context.Context, id string) error
+	Update(ctx context.Context, id, title string) error
 }
 
 type MessageRepository interface {
@@ -59,4 +60,5 @@ type Service interface {
 	GetConversation(ctx context.Context, userID, convID string) (*Conversation, []*Message, error)
 	SendMessage(ctx context.Context, userID, convID string, content string) (<-chan string, error)
 	DeleteConversation(ctx context.Context, userID, convID string) error
+	UpdateConversation(ctx context.Context, userID, convID, title string) (*Conversation, error)
 }

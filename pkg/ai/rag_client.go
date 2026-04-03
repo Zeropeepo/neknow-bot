@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -19,10 +20,15 @@ type RAGClient struct {
 }
 
 type ragRequestBody struct {
-	BotID        string                 `json:"bot_id"`
-	SystemPrompt string                 `json:"system_prompt"`
-	Query        string                 `json:"query"`
-	History      []domain.HistoryMessage `json:"history"`
+	BotID        string              `json:"bot_id"`
+	SystemPrompt string              `json:"system_prompt"`
+	Query        string              `json:"query"`
+	History      []ragHistoryMessage `json:"history"`
+}
+
+type ragHistoryMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 func NewRAGClient(cfg *config.Config) *RAGClient {
@@ -33,11 +39,19 @@ func NewRAGClient(cfg *config.Config) *RAGClient {
 }
 
 func (c *RAGClient) Stream(ctx context.Context, req domain.RAGRequest) (<-chan string, error) {
+	history := make([]ragHistoryMessage, 0, len(req.History))
+	for _, h := range req.History {
+		history = append(history, ragHistoryMessage{
+			Role:    string(h.Role),
+			Content: h.Content,
+		})
+	}
+
 	body, err := json.Marshal(ragRequestBody{
 		BotID:        req.BotID,
 		SystemPrompt: req.SystemPrompt,
 		Query:        req.Query,
-		History:      req.History,
+		History:      history,
 	})
 	if err != nil {
 		return nil, err
@@ -60,7 +74,11 @@ func (c *RAGClient) Stream(ctx context.Context, req domain.RAGRequest) (<-chan s
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		resp.Body.Close()
+		if len(respBody) > 0 {
+			return nil, fmt.Errorf("RAG service error: %d body=%s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+		}
 		return nil, fmt.Errorf("RAG service error: %d", resp.StatusCode)
 	}
 
@@ -71,6 +89,8 @@ func (c *RAGClient) Stream(ctx context.Context, req domain.RAGRequest) (<-chan s
 		defer resp.Body.Close()
 
 		scanner := bufio.NewScanner(resp.Body)
+		buf := make([]byte, 0, 64*1024)
+		scanner.Buffer(buf, 1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 
@@ -94,6 +114,13 @@ func (c *RAGClient) Stream(ctx context.Context, req domain.RAGRequest) (<-chan s
 			case tokenCh <- event.Content:
 			case <-ctx.Done():
 				return
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			select {
+			case tokenCh <- "\n\n[stream parse error]\n":
+			case <-ctx.Done():
 			}
 		}
 	}()

@@ -16,6 +16,7 @@ var (
 )
 
 const historyLimit = 10
+const maxHistoryMessageChars = 1200
 
 type chatService struct {
 	convRepo domain.ConversationRepository
@@ -118,7 +119,7 @@ func (s *chatService) SendMessage(ctx context.Context, userID, convID string, co
 	for _, msg := range history {
 		historyMessages = append(historyMessages, domain.HistoryMessage{
 			Role:    msg.Role,
-			Content: msg.Content,
+			Content: truncateText(msg.Content, maxHistoryMessageChars),
 		})
 	}
 
@@ -174,4 +175,29 @@ func (s *chatService) DeleteConversation(ctx context.Context, userID, convID str
 		return ErrUnauthorized
 	}
 	return s.convRepo.Delete(ctx, convID)
+}
+
+func (s *chatService) UpdateConversation(ctx context.Context, userID, convID, title string) (*domain.Conversation, error) {
+	conv, err := s.convRepo.FindByID(ctx, convID)
+	if err != nil {
+		return nil, err
+	}
+	if conv == nil {
+		return nil, ErrConversationNotFound
+	}
+	if conv.UserID != userID {
+		return nil, ErrUnauthorized
+	}
+	if err := s.convRepo.Update(ctx, convID, title); err != nil {
+		return nil, err
+	}
+	conv.Title = title
+	return conv, nil
+}
+
+func truncateText(text string, maxChars int) string {
+	if maxChars <= 0 || len(text) <= maxChars {
+		return text
+	}
+	return text[:maxChars]
 }

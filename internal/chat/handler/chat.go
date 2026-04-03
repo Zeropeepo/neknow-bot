@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"errors"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -139,6 +140,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		case errors.Is(err, chatService.ErrUnauthorized):
 			response.Unauthorized(c)
 		default:
+			log.Printf("send_message_failed user_id=%s conv_id=%s err=%v", userID, convID, err)
 			response.InternalError(c)
 		}
 		return
@@ -181,4 +183,39 @@ func (h *ChatHandler) DeleteConversation(c *gin.Context) {
 	}
 
 	response.Success(c, nil)
+}
+
+func (h *ChatHandler) UpdateConversation(c *gin.Context) {
+	convID := c.Param("conv_id")
+	userID := c.GetString(middleware.UserIDKey)
+
+	var req dto.UpdateConversationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "invalid request body")
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	conv, err := h.service.UpdateConversation(c.Request.Context(), userID, convID, req.Title)
+	if err != nil {
+		switch {
+		case errors.Is(err, chatService.ErrConversationNotFound):
+			response.NotFound(c, "conversation not found")
+		case errors.Is(err, chatService.ErrUnauthorized):
+			response.Unauthorized(c)
+		default:
+			response.InternalError(c)
+		}
+		return
+	}
+
+	response.Success(c, dto.CreateConversationResponse{
+		ID:        conv.ID,
+		BotID:     conv.BotID,
+		Title:     conv.Title,
+		CreatedAt: conv.CreatedAt,
+	})
 }

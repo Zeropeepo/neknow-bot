@@ -47,7 +47,7 @@ func (r *conversationRepository) FindByBotID(ctx context.Context, botID string) 
 	var ms []models.Conversation
 	result := r.db.WithContext(ctx).
 		Where("bot_id = ?", botID).
-		Order("updated_at DESC").  
+		Order("updated_at DESC").
 		Find(&ms)
 	if result.Error != nil {
 		return nil, result.Error
@@ -66,6 +66,12 @@ func (r *conversationRepository) Delete(ctx context.Context, id string) error {
 		Delete(&models.Conversation{}).Error
 }
 
+func (r *conversationRepository) Update(ctx context.Context, id, title string) error {
+	return r.db.WithContext(ctx).
+		Model(&models.Conversation{}).
+		Where("id = ?", id).
+		Update("title", title).Error
+}
 
 // Mapper
 func toConvModel(c *domain.Conversation) *models.Conversation {

@@ -79,11 +79,26 @@ func main() {
 	fileHdlr := fileHandler.NewFileHandler(fileSvc)
 
 	r := gin.Default()
-	r.RedirectTrailingSlash = false 
-	
-	 r.GET("/health", func(c *gin.Context) {
-        c.JSON(200, gin.H{"status": "ok"})
-    })
+	r.RedirectTrailingSlash = false
+
+	// Add CORS middleware
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 
 	api := r.Group("/api/v1")
 	{
@@ -115,6 +130,7 @@ func main() {
 				bots.POST("/:id/conversations", cHandler.CreateConversation)
 				bots.GET("/:id/conversations", cHandler.GetConversations)
 				bots.GET("/:id/conversations/:conv_id", cHandler.GetConversation)
+				bots.PUT("/:id/conversations/:conv_id", cHandler.UpdateConversation)
 				bots.POST("/:id/conversations/:conv_id/messages", cHandler.SendMessage)
 				bots.DELETE("/:id/conversations/:conv_id", cHandler.DeleteConversation)
 			}
